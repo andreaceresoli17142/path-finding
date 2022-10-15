@@ -2,10 +2,24 @@ package main
 
 import (
 	"bufio"
+	"errors"
+	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 )
+
+var E = " "
+var F = "#"
+
+var x int
+var y int
+var p float64
+
+var gx int
+var gy int
 
 var worldmap [][]string
 var visited = make(map[string]bool)
@@ -43,13 +57,9 @@ func search(nodearr *[]node, diffx int, diffy int) string {
 	newx := (*nodearr)[na_len-1].x + diffx
 	newy := (*nodearr)[na_len-1].y + diffy
 
-	/*
-		fmt.Printf("looking at: %d, %d", newx, newy)
-		bin := ""
-		fmt.Scan(&bin)
-	*/
+	//fmt.Printf("newx: %v, newy: %v\n", newx, newy)
 
-	if newy >= len(worldmap) || newx >= len(worldmap[newy]) || newx < 0 || newy < 0 {
+	if newx < 0 || newy < 0 || newy >= len(worldmap) || newx >= len(worldmap[newy]) {
 		return "invalid"
 	}
 
@@ -125,7 +135,8 @@ func solve() ([]node, error) {
 
 	}
 
-	fmt.Println(startx+1, starty+1)
+	// fmt.Printf("%v", worldmap)
+	// fmt.Printf("starting from: %v, %v\n", startx, starty)
 
 	// add start as first node
 
@@ -153,7 +164,7 @@ func solve() ([]node, error) {
 		return nodeArr, nil
 	}
 
-	return nil, fmt.Errorf("no path found")
+	return nil, errors.New("no path found")
 }
 
 func relPos(n1 node, n2 node) (string, error) {
@@ -180,11 +191,11 @@ func relPos(n1 node, n2 node) (string, error) {
 	}
 
 	if y1 > y2 {
-		return "south", nil
+		return "north", nil
 	}
 
 	if y1 < y2 {
-		return "north", nil
+		return "south", nil
 	}
 
 	return "", fmt.Errorf("no condition has been met")
@@ -199,11 +210,100 @@ func prettyPrint(inp [][]string) {
 	}
 }
 
+func fillNodeConn(slc *string) {
+	rand.Seed(time.Now().UnixNano())
+	if rand.Float64() > p {
+		*slc = F
+	} else {
+		*slc = E
+	}
+}
+
+func printGameMap(gm [][]string, sx int, sy int) {
+	for i := 0; i < len(gm); i++ {
+		for t := 0; t < len(gm[0]); t++ {
+			if t == gx && i == gy {
+				fmt.Print("G")
+				continue
+			} else if t == sx && i == sy {
+				fmt.Print("S")
+				continue
+			}
+			fmt.Print(gm[i][t])
+		}
+		fmt.Print("\n")
+	}
+}
+
 func main() {
 
 	var err error
 
-	err = loadMap("map.txt")
+	fmt.Println("app is now running")
+
+	flag.IntVar(&x, "x", 10, "specify labirinth lenght, default is 10")
+	flag.IntVar(&y, "y", 10, "specify labirinth height, default is 10")
+	flag.Float64Var(&p, "p", 0.5, "specify labirinth percolation, default is 0.5")
+
+	flag.Parse()
+
+	game_map := make([][]string, y*2+1, y*2+1)
+
+	for i, _ := range game_map {
+		game_map[i] = make([]string, x*2+1, x*2+1)
+	}
+
+	for i := 0; i < y*2+1; i++ {
+		for t := 0; t < x*2+1; t++ {
+			// print edges
+			if i == 0 || i == y*2 || t == 0 || t == x*2 {
+				game_map[i][t] = F
+			} else if i%2 == 1 {
+				if t%2 == 1 {
+					game_map[i][t] = F
+				} else {
+					fillNodeConn(&game_map[i][t])
+				}
+			} else {
+				if t%2 == 1 {
+					fillNodeConn(&game_map[i][t])
+				} else {
+					//print node
+					game_map[i][t] = E
+				}
+			}
+
+		}
+	}
+
+	for {
+		gy = rand.Int() % len(game_map)
+		gx = rand.Int() % len(game_map[0])
+
+		if game_map[gy][gx] == " " {
+			game_map[gy][gx] = "G"
+			break
+		}
+	}
+
+	var sx int
+	var sy int
+
+	for {
+		sy = rand.Int() % len(game_map)
+		sx = rand.Int() % len(game_map[0])
+
+		if game_map[sy][sx] == " " {
+			game_map[sy][sx] = "S"
+			break
+		}
+	}
+
+	printGameMap(game_map, sx, sy)
+
+	worldmap = game_map
+
+	//err = loadMap("map.txt")
 
 	if err != nil {
 		fmt.Printf("Error while reading file: %v\n", err)
@@ -212,11 +312,9 @@ func main() {
 	res, err := solve()
 
 	if err != nil {
-		fmt.Println("error during execution: ", err.Error)
+		fmt.Println("error during execution: ", err)
 		return
 	}
-
-	fmt.Printf("solved:\n%v", res)
 
 	ste := "╔"
 
@@ -250,11 +348,11 @@ func main() {
 			return
 		}
 
-		fmt.Printf("looking at %v: \ncoming from %s\ngoing to %s\n", val, dir1, dir2)
-
-		if (dir1 == "south" && dir2 == "east") || (dir2 == "south" && dir1 == "east") {
+		if (dir1 == "north" && dir2 == "east") || (dir2 == "north" && dir1 == "east") {
+			worldmap[val.y][val.x] = nte
+		} else if (dir1 == "south" && dir2 == "east") || (dir2 == "south" && dir1 == "east") {
 			worldmap[val.y][val.x] = ste
-		} else if (dir1 == "nord" && dir2 == "east") || (dir2 == "nord" && dir1 == "east") {
+		} else if (dir1 == "north" && dir2 == "east") || (dir2 == "north" && dir1 == "east") {
 			worldmap[val.y][val.x] = nte
 		} else if (dir1 == "west" && dir2 == "south") || (dir2 == "west" && dir1 == "south") {
 			worldmap[val.y][val.x] = wts
@@ -266,6 +364,8 @@ func main() {
 			worldmap[val.y][val.x] = wte
 		}
 	}
+
+	fmt.Println("\n-------------------------------------------------------\n")
 
 	prettyPrint(worldmap)
 }
