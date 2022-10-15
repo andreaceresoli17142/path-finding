@@ -14,13 +14,6 @@ import (
 var E = " "
 var F = "#"
 
-var x int
-var y int
-var p float64
-
-var gx int
-var gy int
-
 var worldmap [][]string
 var visited = make(map[string]bool)
 
@@ -56,8 +49,6 @@ func search(nodearr *[]node, diffx int, diffy int) string {
 
 	newx := (*nodearr)[na_len-1].x + diffx
 	newy := (*nodearr)[na_len-1].y + diffy
-
-	//fmt.Printf("newx: %v, newy: %v\n", newx, newy)
 
 	if newx < 0 || newy < 0 || newy >= len(worldmap) || newx >= len(worldmap[newy]) {
 		return "invalid"
@@ -135,9 +126,6 @@ func solve() ([]node, error) {
 
 	}
 
-	// fmt.Printf("%v", worldmap)
-	// fmt.Printf("starting from: %v, %v\n", startx, starty)
-
 	// add start as first node
 
 	nodeArr = append(nodeArr, node{
@@ -210,7 +198,7 @@ func prettyPrint(inp [][]string) {
 	}
 }
 
-func fillNodeConn(slc *string) {
+func fillNodeConn(slc *string, p float64) {
 	rand.Seed(time.Now().UnixNano())
 	if rand.Float64() > p {
 		*slc = F
@@ -219,25 +207,14 @@ func fillNodeConn(slc *string) {
 	}
 }
 
-func printGameMap(gm [][]string, sx int, sy int) {
-	for i := 0; i < len(gm); i++ {
-		for t := 0; t < len(gm[0]); t++ {
-			if t == gx && i == gy {
-				fmt.Print("G")
-				continue
-			} else if t == sx && i == sy {
-				fmt.Print("S")
-				continue
-			}
-			fmt.Print(gm[i][t])
-		}
-		fmt.Print("\n")
-	}
-}
-
 func main() {
 
-	var err error
+	var (
+		err error
+		x   int
+		y   int
+		p   float64
+	)
 
 	fmt.Println("app is now running")
 
@@ -262,11 +239,11 @@ func main() {
 				if t%2 == 1 {
 					game_map[i][t] = F
 				} else {
-					fillNodeConn(&game_map[i][t])
+					fillNodeConn(&game_map[i][t], p)
 				}
 			} else {
 				if t%2 == 1 {
-					fillNodeConn(&game_map[i][t])
+					fillNodeConn(&game_map[i][t], p)
 				} else {
 					//print node
 					game_map[i][t] = E
@@ -277,21 +254,17 @@ func main() {
 	}
 
 	for {
-		gy = rand.Int() % len(game_map)
-		gx = rand.Int() % len(game_map[0])
+		gy := rand.Int() % len(game_map)
+		gx := rand.Int() % len(game_map[0])
 
 		if game_map[gy][gx] == " " {
 			game_map[gy][gx] = "G"
 			break
 		}
 	}
-
-	var sx int
-	var sy int
-
 	for {
-		sy = rand.Int() % len(game_map)
-		sx = rand.Int() % len(game_map[0])
+		sy := rand.Int() % len(game_map)
+		sx := rand.Int() % len(game_map[0])
 
 		if game_map[sy][sx] == " " {
 			game_map[sy][sx] = "S"
@@ -299,7 +272,7 @@ func main() {
 		}
 	}
 
-	printGameMap(game_map, sx, sy)
+	prettyPrint(game_map)
 
 	worldmap = game_map
 
