@@ -17,6 +17,8 @@ var F = "#"
 var worldmap [][]string
 var visited = make(map[string]bool)
 
+var solveLen int
+
 func loadMap(filename string) error {
 
 	readFile, err := os.Open(filename)
@@ -39,8 +41,9 @@ func loadMap(filename string) error {
 }
 
 type node struct {
-	x int
-	y int
+	x    int
+	y    int
+	move []string
 }
 
 func search(nodearr *[]node, diffx int, diffy int) string {
@@ -50,7 +53,9 @@ func search(nodearr *[]node, diffx int, diffy int) string {
 	newx := (*nodearr)[na_len-1].x + diffx
 	newy := (*nodearr)[na_len-1].y + diffy
 
-	if newx < 0 || newy < 0 || newy >= len(worldmap) || newx >= len(worldmap[newy]) {
+	//fmt.Printf("starting from: \n%v\n\tgoing to: %v, %v\n\texcluding: %v\n\tmin path: %v\n", *nodearr, newy, newx, visited, solveLen)
+
+	if newx < 0 || newy < 0 || newy >= len(worldmap) || newx >= len(worldmap[newy]) || (solveLen > 0 && na_len >= solveLen) {
 		return "invalid"
 	}
 
@@ -60,6 +65,7 @@ func search(nodearr *[]node, diffx int, diffy int) string {
 		return "invalid"
 	}
 
+	//fmt.Println("looking at: ", worldmap[newy][newx])
 	switch worldmap[newy][newx] {
 
 	case "G":
@@ -68,6 +74,7 @@ func search(nodearr *[]node, diffx int, diffy int) string {
 			x: newx,
 			y: newy,
 		})
+		solveLen = len(*nodearr)
 		return "goal"
 	case "#":
 		return "invalid"
@@ -81,20 +88,35 @@ func search(nodearr *[]node, diffx int, diffy int) string {
 
 		visited[fmt.Sprintf("%d, %d", newy, newx)] = true
 
+		//fmt.Println("\n-------------------------------------------------------\n")
+		//printResult(*nodearr)
+
+		dir, err := relPos((*nodearr)[na_len-1], (*nodearr)[na_len])
+
+		if err != nil {
+			fmt.Println("error in getting relative position")
+		}
+
+		(*nodearr)[na_len-1].move = append((*nodearr)[na_len-1].move, dir)
+
 		// search north, west, east, south of that node
 
+		// go east
 		if search(nodearr, 1, 0) == "goal" {
 			return "goal"
 		}
 
+		// go south
 		if search(nodearr, 0, 1) == "goal" {
 			return "goal"
 		}
 
+		// go west
 		if search(nodearr, -1, 0) == "goal" {
 			return "goal"
 		}
 
+		// go north
 		if search(nodearr, 0, -1) == "goal" {
 			return "goal"
 		}
@@ -153,6 +175,74 @@ func solve() ([]node, error) {
 	}
 
 	return nil, errors.New("no path found")
+}
+
+func refine(sol []node) {
+
+	var ret []node
+
+	sol = sol[:len(sol)-1]
+
+	for i := 0; i < len(sol); i++ {
+		subNode := sol[:len(sol)-i]
+		visited = make(map[string]bool)
+		for _, t := range subNode[:len(subNode)-1] {
+			visited[fmt.Sprintf("%d, %d", t.y, t.x)] = true
+		}
+
+		// go east
+		if !Contains(subNode[len(subNode)-1].move, "east") {
+			if search(&subNode, 1, 0) == "goal" {
+				fmt.Println("\n-------------------------------------------------------\n")
+				printResult(subNode)
+				ret = subNode
+				continue
+			}
+		}
+
+		// go south
+		if !Contains(subNode[len(subNode)-1].move, "south") {
+			if search(&subNode, 0, 1) == "goal" {
+				fmt.Println("\n-------------------------------------------------------\n")
+				printResult(subNode)
+				ret = subNode
+				continue
+			}
+		}
+
+		// go west
+		if !Contains(subNode[len(subNode)-1].move, "west") {
+			if search(&subNode, -1, 0) == "goal" {
+				fmt.Println("\n-------------------------------------------------------\n")
+				printResult(subNode)
+				ret = subNode
+				continue
+			}
+		}
+
+		// go north
+		if !Contains(subNode[len(subNode)-1].move, "north") {
+			if search(&subNode, 0, -1) == "goal" {
+				fmt.Println("\n-------------------------------------------------------\n")
+				printResult(subNode)
+				ret = subNode
+				continue
+			}
+		}
+	}
+
+	fmt.Println("\n-------------------------------------------------------\n")
+	printResult(ret)
+
+}
+
+func Contains(sl []string, name string) bool {
+	for _, value := range sl {
+		if value == name {
+			return true
+		}
+	}
+	return false
 }
 
 func relPos(n1 node, n2 node) (string, error) {
@@ -261,7 +351,14 @@ func generateMapByPercolation(x int, y int, p float64) [][]string {
 
 func printResult(res []node) {
 
-	tmpworldmap := worldmap
+	//tmpworldmap := worldmap
+
+	tmpworldmap := make([][]string, len(worldmap))
+
+	for i := range worldmap {
+		tmpworldmap[i] = make([]string, len(worldmap[i]))
+		copy(tmpworldmap[i], worldmap[i])
+	}
 
 	ste := "╔"
 
@@ -325,21 +422,19 @@ func main() {
 		mapDir string
 	)
 
-	fmt.Println("app is now running")
-
-	flag.StringVar(&mapDir, "dir", "", "specify text file containing map")
+	flag.StringVar(&mapDir, "f", "", "specify text file containing map")
 	flag.IntVar(&x, "x", 10, "specify labirinth lenght, default is 10")
 	flag.IntVar(&y, "y", 10, "specify labirinth height, default is 10")
 	flag.Float64Var(&p, "p", 0.8, "specify labirinth percolation, default is 0.8")
 
 	flag.Parse()
 
+	fmt.Println(mapDir)
 	if mapDir != "" {
-		err = loadMap("map.txt")
+		err = loadMap(mapDir)
 		if err != nil {
 			fmt.Printf("Error while reading file: %v\n", err)
 		}
-		return
 	} else {
 		worldmap = generateMapByPercolation(x, y, p)
 	}
@@ -356,4 +451,6 @@ func main() {
 	}
 
 	printResult(res)
+
+	refine(res)
 }
