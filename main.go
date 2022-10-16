@@ -207,23 +207,7 @@ func fillNodeConn(slc *string, p float64) {
 	}
 }
 
-func main() {
-
-	var (
-		err error
-		x   int
-		y   int
-		p   float64
-	)
-
-	fmt.Println("app is now running")
-
-	flag.IntVar(&x, "x", 10, "specify labirinth lenght, default is 10")
-	flag.IntVar(&y, "y", 10, "specify labirinth height, default is 10")
-	flag.Float64Var(&p, "p", 0.5, "specify labirinth percolation, default is 0.5")
-
-	flag.Parse()
-
+func generateMapByPercolation(x int, y int, p float64) [][]string {
 	game_map := make([][]string, y*2+1, y*2+1)
 
 	for i, _ := range game_map {
@@ -272,22 +256,12 @@ func main() {
 		}
 	}
 
-	prettyPrint(game_map)
+	return game_map
+}
 
-	worldmap = game_map
+func printResult(res []node) {
 
-	//err = loadMap("map.txt")
-
-	if err != nil {
-		fmt.Printf("Error while reading file: %v\n", err)
-	}
-
-	res, err := solve()
-
-	if err != nil {
-		fmt.Println("error during execution: ", err)
-		return
-	}
+	tmpworldmap := worldmap
 
 	ste := "╔"
 
@@ -322,23 +296,64 @@ func main() {
 		}
 
 		if (dir1 == "north" && dir2 == "east") || (dir2 == "north" && dir1 == "east") {
-			worldmap[val.y][val.x] = nte
+			tmpworldmap[val.y][val.x] = nte
 		} else if (dir1 == "south" && dir2 == "east") || (dir2 == "south" && dir1 == "east") {
-			worldmap[val.y][val.x] = ste
+			tmpworldmap[val.y][val.x] = ste
 		} else if (dir1 == "north" && dir2 == "east") || (dir2 == "north" && dir1 == "east") {
-			worldmap[val.y][val.x] = nte
+			tmpworldmap[val.y][val.x] = nte
 		} else if (dir1 == "west" && dir2 == "south") || (dir2 == "west" && dir1 == "south") {
-			worldmap[val.y][val.x] = wts
+			tmpworldmap[val.y][val.x] = wts
 		} else if (dir1 == "west" && dir2 == "north") || (dir2 == "west" && dir1 == "north") {
-			worldmap[val.y][val.x] = wtn
+			tmpworldmap[val.y][val.x] = wtn
 		} else if (dir1 == "north" && dir2 == "south") || (dir2 == "north" && dir1 == "south") {
-			worldmap[val.y][val.x] = nts
+			tmpworldmap[val.y][val.x] = nts
 		} else if (dir1 == "west" && dir2 == "east") || (dir2 == "west" && dir1 == "east") {
-			worldmap[val.y][val.x] = wte
+			tmpworldmap[val.y][val.x] = wte
 		}
 	}
 
-	fmt.Println("\n-------------------------------------------------------\n")
+	prettyPrint(tmpworldmap)
+}
+
+func main() {
+
+	var (
+		err    error
+		x      int
+		y      int
+		p      float64
+		mapDir string
+	)
+
+	fmt.Println("app is now running")
+
+	flag.StringVar(&mapDir, "dir", "", "specify text file containing map")
+	flag.IntVar(&x, "x", 10, "specify labirinth lenght, default is 10")
+	flag.IntVar(&y, "y", 10, "specify labirinth height, default is 10")
+	flag.Float64Var(&p, "p", 0.8, "specify labirinth percolation, default is 0.8")
+
+	flag.Parse()
+
+	if mapDir != "" {
+		err = loadMap("map.txt")
+		if err != nil {
+			fmt.Printf("Error while reading file: %v\n", err)
+		}
+		return
+	} else {
+		worldmap = generateMapByPercolation(x, y, p)
+	}
 
 	prettyPrint(worldmap)
+
+	fmt.Println("\n-------------------------------------------------------\n")
+
+	res, err := solve()
+
+	if err != nil {
+		fmt.Println("error during execution: ", err)
+		return
+	}
+
+	printResult(res)
 }
