@@ -234,6 +234,10 @@ func refine(sol []node) {
 	fmt.Println("\n-------------------------------------------------------\n")
 	printResult(ret)
 
+	if len(ret) > 2 {
+		refine(ret)
+	}
+
 }
 
 func Contains(sl []string, name string) bool {
