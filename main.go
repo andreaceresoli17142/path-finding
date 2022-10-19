@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -16,6 +17,7 @@ var F = "#"
 
 var worldmap [][]string
 var visited = make(map[string]bool)
+var test []node
 
 var solveLen int
 
@@ -75,6 +77,10 @@ func search(nodearr *[]node, diffx int, diffy int) string {
 			y: newy,
 		})
 		solveLen = len(*nodearr)
+		fmt.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+		printResult(*nodearr)
+		fmt.Println("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+		fmt.Println("parsing: ", *nodearr)
 		return "goal"
 	case "#":
 		return "invalid"
@@ -179,65 +185,115 @@ func solve() ([]node, error) {
 
 func refine(sol []node) {
 
-	var ret []node
+	//var ret []node
 
 	sol = sol[:len(sol)-1]
 
 	for i := 0; i < len(sol); i++ {
 		subNode := sol[:len(sol)-i]
 		visited = make(map[string]bool)
+
 		for _, t := range subNode[:len(subNode)-1] {
 			visited[fmt.Sprintf("%d, %d", t.y, t.x)] = true
 		}
+		/*
+					fmt.Println("\n--------------------START-------------------------\n")
 
+					fmt.Printf(`
+
+			DEBUG:
+				node stack: %v
+				visited nodes: %v
+			END DEBUG
+
+			`, subNode, visited)
+		*/
 		// go east
 		if !Contains(subNode[len(subNode)-1].move, "east") {
 			if search(&subNode, 1, 0) == "goal" {
-				fmt.Println("\n-------------------------------------------------------\n")
 				printResult(subNode)
-				ret = subNode
+				//ret = subNode
+				addtoT(subNode)
+				fmt.Println(reflect.DeepEqual(test, subNode))
+				//fmt.Println(&test == &subNode)
+				fmt.Println(subNode)
+				fmt.Println("\n--------------------FOUND-------------------------\n")
 				continue
 			}
 		}
-
+		/*
+			fmt.Println(reflect.DeepEqual(test, subNode))
+			fmt.Println(subNode)
+		*/
 		// go south
 		if !Contains(subNode[len(subNode)-1].move, "south") {
 			if search(&subNode, 0, 1) == "goal" {
-				fmt.Println("\n-------------------------------------------------------\n")
 				printResult(subNode)
-				ret = subNode
+				//ret = subNode
+				addtoT(subNode)
+				fmt.Println(reflect.DeepEqual(test, subNode))
+				//fmt.Println(&test == &subNode)
+				fmt.Println(subNode)
+				fmt.Println("\n--------------------FOUND-------------------------\n")
+				continue
+			}
+		}
+		/*
+			fmt.Println(reflect.DeepEqual(test, ret))
+			fmt.Println(test)
+		*/
+		// go west
+		if !Contains(subNode[len(subNode)-1].move, "west") {
+			if search(&subNode, -1, 0) == "goal" {
+				printResult(subNode)
+				//ret = subNode
+				addtoT(subNode)
+				fmt.Println(reflect.DeepEqual(test, subNode))
+				//fmt.Println(&test == &subNode)
+				fmt.Println(subNode)
+				fmt.Println("\n--------------------FOUND-------------------------\n")
 				continue
 			}
 		}
 
-		// go west
-		if !Contains(subNode[len(subNode)-1].move, "west") {
-			if search(&subNode, -1, 0) == "goal" {
-				fmt.Println("\n-------------------------------------------------------\n")
-				printResult(subNode)
-				ret = subNode
-				continue
-			}
-		}
+		/*
+			fmt.Println(reflect.DeepEqual(test, ret))
+			fmt.Println(test)
+		*/
 
 		// go north
 		if !Contains(subNode[len(subNode)-1].move, "north") {
 			if search(&subNode, 0, -1) == "goal" {
-				fmt.Println("\n-------------------------------------------------------\n")
 				printResult(subNode)
-				ret = subNode
+				//ret = subNode
+				addtoT(subNode)
+				fmt.Println(reflect.DeepEqual(test, subNode))
+				//fmt.Println(&test == &subNode)
+				fmt.Println(subNode)
+				fmt.Println("\n--------------------FOUND-------------------------\n")
 				continue
 			}
 		}
+		/*
+			fmt.Println(reflect.DeepEqual(test, ret))
+			fmt.Println(test)
+			fmt.Println("\n--------------------NOT FOUND-------------------------\n")
+		*/
 	}
 
-	fmt.Println("\n-------------------------------------------------------\n")
-	printResult(ret)
-
-	if len(ret) > 2 {
-		refine(ret)
+	if len(sol) > 2 {
+		refine(sol)
 	}
 
+}
+
+func addtoT(i []node) {
+	fmt.Printf("%p\n", &i)
+	for _, t := range i {
+		fmt.Printf("%p\n", &t)
+	}
+	fmt.Println("ADDING: ", i)
+	test = i
 }
 
 func Contains(sl []string, name string) bool {
@@ -284,7 +340,34 @@ func relPos(n1 node, n2 node) (string, error) {
 }
 
 func prettyPrint(inp [][]string) {
-	for _, y := range inp {
+
+	fmt.Print("   ")
+	for i := 0; i < len(inp); i++ {
+		secdec := i / 10
+		if secdec > 0 {
+			fmt.Print(secdec)
+		} else {
+			fmt.Print(" ")
+		}
+	}
+	fmt.Println()
+
+	fmt.Print("   ")
+	for i := 0; i < len(inp); i++ {
+		fmt.Print(i % 10)
+	}
+	fmt.Print("\n\n")
+
+	for i, y := range inp {
+
+		fmt.Print(i)
+
+		if i/10 < 1 {
+			fmt.Print(" ")
+		}
+
+		fmt.Print(" ")
+
 		for _, x := range y {
 			fmt.Print(x)
 		}
@@ -384,16 +467,15 @@ func printResult(res []node) {
 		dir1, err := relPos(val, res[i-1])
 
 		if err != nil {
-			fmt.Println("error during execution: ", err.Error)
-			return
-
+			fmt.Printf("error during execution: %v\n", err)
+			//return
 		}
 
 		dir2, err := relPos(val, res[i+1])
 
 		if err != nil {
-			fmt.Println("error during execution: ", err.Error)
-			return
+			fmt.Printf("error during execution: %v\n", err)
+			//return
 		}
 
 		if (dir1 == "north" && dir2 == "east") || (dir2 == "north" && dir1 == "east") {
@@ -434,6 +516,7 @@ func main() {
 	flag.Parse()
 
 	fmt.Println(mapDir)
+	mapDir = "map.txt"
 	if mapDir != "" {
 		err = loadMap(mapDir)
 		if err != nil {
@@ -450,11 +533,16 @@ func main() {
 	res, err := solve()
 
 	if err != nil {
-		fmt.Println("error during execution: ", err)
+		fmt.Println("error during execution: ", err.Error)
 		return
 	}
 
 	printResult(res)
 
+	fmt.Println("\n----------------------- START REFINE --------------------------------")
+
 	refine(res)
+
+	fmt.Println(test)
+	printResult(test)
 }
